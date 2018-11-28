@@ -13,7 +13,7 @@ int put_msg(buffer * buf, mes_car car)
     }else
     {
         buf->size = (buf->size + 1);
-        if(car.prio == 1)//if priority move to the brginning
+        if(car.prio == 1)//if priority move to the bringing
         {
             buf->begin = (buf->begin + 9)% 10; //-1
             buf->car_buf[buf->begin] = car;
@@ -22,13 +22,22 @@ int put_msg(buffer * buf, mes_car car)
             buf->end = (buf->end + 1)% 10; //+1
             buf->car_buf[buf->end] = car;
         }
+        return 0;
     }
 }
 
 mes_car get_msg(buffer * buf)
 {
-    mes_car car = buf->car_buf[buf->begin];
-    buf->begin = (buf->begin + 1)% 10; //+1
-    buf->size = (buf->size - 1);
+    mes_car car;
+
+    if(buf->begin != buf->end)
+    {
+        car = buf->car_buf[buf->begin];
+        buf->begin = (buf->begin + 1)% 10; //+1
+        buf->size = (buf->size - 1);
+    }else{
+        car.prio = -1;
+        car.destination = -1;
+    }
     return car;
 }
