@@ -9,12 +9,22 @@
 
 #define BUF_SIZE 10
 
-typedef struct{
+typedef struct Queue{
     int size;
     int begin;
     int end;
     mes_car car_buf[BUF_SIZE];
     FILE* my_stream;
-} buffer;
+    int count_semaphore;
+}queue;
+
+int put_msg(queue * , mes_car );
+
+mes_car see_msg(queue * );
+void take_car(queue * );
+
+void print_queue(queue * );
+
+void init_queue(queue * , FILE * , int );
 
 #endif //QUEUE_PS
