@@ -2,10 +2,10 @@
 // Created by przemek on 11/29/18.
 //
 
-#ifndef SOI_3_SH_MEM_H
-#define SOI_3_SH_MEM_H
+#ifndef SH_MEM_PS
+#define SH_MEM_PS
 
 int alloc_sh_queue();
 void * map_queue(int);
 
-#endif //SOI_3_SH_MEM_H
+#endif //SH_MEM_PS

@@ -13,22 +13,22 @@
 #include <sys/sem.h>
 
 #include "../include/const.h"
+#include "../include/terminal-stream.h"
 #include "../include/sem.h"
 #include "../include/message.h"
 #include "../include/queue.h"
 #include "../include/sh-mem.h"
 #include "../include/worker.h"
 
-
-FILE *slave1, *slave2, *slave3;
-
 void sigterm_exit(); //TODO
 
 void mem_sem_alloc(); //TODO
 
+FILE *slave1, *slave2, *slave3;
+
 int queue1, queue2, queue3; //keys to queues
 int m_sem1, m_sem2, m_sem3; //semids to queue mutex
-
+int c_sem1, c_sem2, c_sem3; //semids to queue count semaphores
 int main(void)
 {
     struct sigaction action;
@@ -40,62 +40,10 @@ int main(void)
  * First we need to obtain 3 separate slave
  * terminals to see how simulation goes on
  */
-    int master;
-    char *slavename, window[64], buf[64];
+    slave1 = get_ptmx_str();
+    slave2 = get_ptmx_str();
+    slave3 = get_ptmx_str();
 /*
- * SLAVE nr 1
- */
-    master = open("/dev/ptmx", O_RDWR);
-
-    grantpt(master);
-    unlockpt(master);
-    slavename = ptsname(master);
-
-    snprintf(buf, sizeof buf, "-S%s/%d", strrchr(slavename,'/')+1, master);
-    if(!fork()) {
-        execlp("xterm", "xterm", buf, (char *)0);
-        _exit(1);
-    }
-    slave1 = fopen(slavename, "r+");
-    fgets(window, sizeof window, slave1);
-    printf("window nr 1: %s\n", window);
-/*
- * SLAVE nr 2
- */
-    master = open("/dev/ptmx", O_RDWR);
-
-    grantpt(master);
-    unlockpt(master);
-    slavename = ptsname(master);
-
-    snprintf(buf, sizeof buf, "-S%s/%d", strrchr(slavename,'/')+1, master);
-    if(!fork()) {
-        execlp("xterm", "xterm", buf, (char *)0);
-        _exit(1);
-    }
-    slave2 = fopen(slavename, "r+");
-    fgets(window, sizeof window, slave2);
-    printf("window nr 2: %s\n", window);
-/*
- * SLAVE nr 3
- */
-    master = open("/dev/ptmx", O_RDWR);
-
-    grantpt(master);
-    unlockpt(master);
-    slavename = ptsname(master);
-
-    snprintf(buf, sizeof buf, "-S%s/%d", strrchr(slavename,'/')+1, master);
-    if(!fork()) {
-        execlp("xterm", "xterm", buf, (char *)0);
-        _exit(1);
-    }
-    slave3 = fopen(slavename, "r+");
-    fgets(window, sizeof window, slave3);
-    printf("window nr 3: %s\n", window);
-/*
- * Repeated code looks ugly but at least works
- *
  * Each slave will introduce himself with
  */
     fprintf(slave1, "Hello from slave 1\n");
@@ -108,25 +56,28 @@ int main(void)
     mem_sem_alloc();
 
     buf1 = map_queue(queue1);
-    init_queue(buf1,slave1,0);
-/*  temp test 1 for mem */
-    mes_car car = {.destination = 1, .prio = 1};
-    put_msg(buf1, gen_car(700));
-    put_msg(buf1, gen_car(1428));
-    put_msg(buf1, gen_car(714));
-    put_msg(buf1, gen_car(1407));
-    put_msg(buf1, car);
-    if(1)
-    {
-        print_queue(buf1);
-    }
-/*  temp test 2 for fork and mem */
+    init_queue(buf1, slave1, c_sem1, m_sem1);
     buf2 = map_queue(queue2);
-    init_queue(buf2,slave2,0);
+    init_queue(buf2, slave2, c_sem2, m_sem2);
+    buf3 = map_queue(queue3);
+    init_queue(buf3, slave3, c_sem3, m_sem3);
+
 
     if(!fork())
     {
         do_work(queue1, queue2, 1);
+        _exit(0);
+    }
+
+    if(!fork())
+    {
+        do_work(queue2, queue3, 2);
+        _exit(0);
+    }
+
+    if(!fork())
+    {
+        do_work(queue3, queue1, 3);
         _exit(0);
     }
 /*  temp fin of the program */
@@ -151,6 +102,10 @@ void sigterm_exit()
     binary_sem_deallocate(m_sem1);
     binary_sem_deallocate(m_sem2);
     binary_sem_deallocate(m_sem3);
+
+    sem_deallocate(c_sem1);
+    sem_deallocate(c_sem2);
+    sem_deallocate(c_sem3);
 }
 
 void mem_sem_alloc()
@@ -163,4 +118,16 @@ void mem_sem_alloc()
     m_sem1 = binary_sem_allocate(QUEUE_1, IPC_CREAT | 0666);
     m_sem2 = binary_sem_allocate(QUEUE_2, IPC_CREAT | 0666);
     m_sem3 = binary_sem_allocate(QUEUE_3, IPC_CREAT | 0666);
+
+    binary_sem_init(m_sem1);
+    binary_sem_init(m_sem2);
+    binary_sem_init(m_sem3);
+
+    c_sem1 = sem_allocate(F_QUEUE_1, IPC_CREAT | 0666);
+    c_sem2 = sem_allocate(F_QUEUE_2, IPC_CREAT | 0666);
+    c_sem3 = sem_allocate(F_QUEUE_3, IPC_CREAT | 0666);
+
+    sem_init(c_sem1, 10);
+    sem_init(c_sem2, 10);
+    sem_init(c_sem3, 10);
 }

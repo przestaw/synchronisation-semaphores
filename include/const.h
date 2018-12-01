@@ -9,9 +9,9 @@
 #define QUEUE_2 2323
 #define QUEUE_3 3131
 
-#define F_QUEUE_12 1299
-#define F_QUEUE_23 2399
-#define F_QUEUE_31 3199
+#define F_QUEUE_1 1299
+#define F_QUEUE_2 2399
+#define F_QUEUE_3 3199
 
 #define E_QUEUE_12 1200
 #define E_QUEUE_23 2300

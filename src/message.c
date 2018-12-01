@@ -10,10 +10,10 @@ mes_car gen_car(int seed)
     if(seed % 7 == 0)
     {
         new_car.prio = 0;
-        if((seed % 13 == 0)||(seed % 10 == 0)) //to assure that both even and uneven targets will have P
+        if((seed % 13 == 0)||(seed % 15 == 0) || (seed % 18 == 0))
             new_car.prio = 1;
 
-        new_car.destination = 1 + seed % 3;
+        new_car.destination = (1 + (seed % 3));
 
     }else{
         new_car = NOT_A_CAR;
