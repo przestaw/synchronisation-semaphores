@@ -13,8 +13,4 @@
 #define F_QUEUE_2 2399
 #define F_QUEUE_3 3199
 
-#define E_QUEUE_12 1200
-#define E_QUEUE_23 2300
-#define E_QUEUE_31 3100
-
 #endif //CONST_PS

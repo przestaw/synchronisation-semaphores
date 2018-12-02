@@ -21,15 +21,8 @@ void do_work_old(int input, int output, int nr)
     in = map_queue(input);
     out = map_queue(output);
 
-    srand(time(NULL) + nr);
+    sem_getVal(in->count_semaphore);
 
-
-    for(int i = 0; i < 300; i++)
-    {
-        put_msg(out, gen_car(rand()));
-        print_queue(out);
-        fprintf(out->my_stream, "\n"); //flush stream
-    }
 }
 
 void do_work(int input, int output, int nr)
@@ -42,48 +35,73 @@ void do_work(int input, int output, int nr)
 
     mes_car current, car, tmp;
     current = NOT_A_CAR;
-
-    while(1)
+    car = NOT_A_CAR;
+    for(int i = 0; i < 10000; i++)
     {
-        car = gen_car(rand()); //car wanting to go on crossing
+        if(car.prio == -1)
+        {
+            do{
+                car = gen_car(rand()); //car wanting to go on crossing
+            }while(car.destination == nr);
+        }
         binary_sem_wait(in->mutex_semaphore);        //SEMAPHORE in WAIT
-        tmp = see_msg(in); //car from road
+        tmp = see_msg(in); //first car from road
         if(tmp.prio <= car.prio )
         {
             current = car;
             car = NOT_A_CAR;
+            fprintf(in->my_stream, "       "); //print spacing
             print_queue(in);
-            if (current.prio == 1)
+            switch (current.prio)
             {
-                fprintf(in->my_stream, " >:P:<\n");
-            }else
-            if(current.prio == 0)
-            {
-                fprintf(in->my_stream, " >:%d:<\n", current.destination);
-            }else
-                {
+                case 1:
+                    fprintf(in->my_stream, " <:P:>\n");
+                    break;
+                case 0:
+                    fprintf(in->my_stream, " < %d >\n", current.destination);
+                    break;
+                default:
                     fprintf(in->my_stream, "\n");
-                }
+                    break;
+            }
+            fflush(in->my_stream);
+            binary_sem_signal(in->mutex_semaphore);    //SEMAPHORE in SINGAL
         }else
         {
             current = tmp;
             tmp = NOT_A_CAR;
             take_car(in);
-            //sem_change(in->count_semaphore, 1);//SEMAPHORE in count UP
+
+            fprintf(in->my_stream, "       "); //print spacing
             print_queue(in);
-            if (current.prio == 1)
+            switch (current.prio)
             {
-                fprintf(in->my_stream, " -> [P]\n");
+                case 1:
+                    fprintf(in->my_stream, " -> [P]");
+                    break;
+                case 0:
+                    fprintf(in->my_stream, " -> [%d]", current.destination);
+                    break;
+                default:
+                    break;
+            }
+            if(current.destination == nr)
+            {
+                fprintf(in->my_stream, " *GONE* \n");
             }else
             {
-                fprintf(in->my_stream, " -> [%d]\n", current.destination);
+                fprintf(in->my_stream, "\n");
             }
+            fflush(in->my_stream);
+            binary_sem_signal(in->mutex_semaphore);    //SEMAPHORE in SINGAL
+            sem_change(in->count_semaphore, +1);//SEMAPHORE in count UP
+
         }
-        binary_sem_signal(in->mutex_semaphore);    //SEMAPHORE in SINGAL
-        fflush(in->my_stream);
+
 
         do_sleep(); //rand sleep from 0.85 to 1.15 sec
         //sleep(1);
+
         if(current.destination == nr)
         {
             current = NOT_A_CAR; //consume car
@@ -91,17 +109,23 @@ void do_work(int input, int output, int nr)
         {
             if(current.prio != -1)
             {
-                //sem_change(out->count_semaphore, -1);//SEMAPHORE out count DOWN-wait
+
+                sem_change(out->count_semaphore, -1);
                 binary_sem_wait(out->mutex_semaphore);//SEMAPHORE out WAIT
-                if (current.prio == 1)
+                switch (current.prio)
                 {
-                    fprintf(out->my_stream, "[P] -> ");
-                }else
-                {
-                    fprintf(out->my_stream, "[%d] -> ", current.destination);
+                    case 1:
+                        fprintf(out->my_stream, "[P] -> ");
+                        break;
+                    case 0:
+                        fprintf(out->my_stream, "[%d] -> ", current.destination);
+                        break;
+                    default:
+                        break;
                 }
                 print_queue(out);
-                fprintf(out->my_stream, "\n"); //flush stream
+                fprintf(out->my_stream, "\n");
+                fflush(out->my_stream);
                 put_msg(out, current); //here to don't interrupt printing
                 binary_sem_signal(out->mutex_semaphore);//SEMAPHORE out SIGNAL
                 current = NOT_A_CAR;
@@ -114,6 +138,6 @@ void do_sleep()
 {
     struct timespec Xtime;
     Xtime.tv_sec = 0;
-    Xtime.tv_nsec = 85000000 + rand()%300000000;
+    Xtime.tv_nsec = 185000000 + rand()%300000000;
     nanosleep(&Xtime, NULL);
 }

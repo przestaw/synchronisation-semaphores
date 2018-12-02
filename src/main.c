@@ -11,6 +11,7 @@
 #include <sys/shm.h>
 #include <sys/types.h>
 #include <sys/sem.h>
+#include <time.h>
 
 #include "../include/const.h"
 #include "../include/terminal-stream.h"
@@ -25,10 +26,11 @@ void sigterm_exit(); //TODO
 void mem_sem_alloc(); //TODO
 
 FILE *slave1, *slave2, *slave3;
+int queues[3]; //keys to queues
+int c_sems[3]; //semids to queue mutex
+int m_sems[3]; //semids to queue count semaphores
+FILE *slaves[3];
 
-int queue1, queue2, queue3; //keys to queues
-int m_sem1, m_sem2, m_sem3; //semids to queue mutex
-int c_sem1, c_sem2, c_sem3; //semids to queue count semaphores
 int main(void)
 {
     struct sigaction action;
@@ -40,46 +42,71 @@ int main(void)
  * First we need to obtain 3 separate slave
  * terminals to see how simulation goes on
  */
-    slave1 = get_ptmx_str();
-    slave2 = get_ptmx_str();
-    slave3 = get_ptmx_str();
+    for(int i = 0; i < 3; i++)
+    {
+       slaves[i] = get_ptmx_str();
+    }
+    //slave1 = get_ptmx_str();
+    //slave2 = get_ptmx_str();
+    //slave3 = get_ptmx_str();
 /*
  * Each slave will introduce himself with
  */
-    fprintf(slave1, "Hello from slave 1\n");
-    fprintf(slave2, "Hello from slave 2\n");
-    fprintf(slave3, "Hello from slave 3\n");
+    for(int i = 0; i < 3; i++)
+    {
+       fprintf(slaves[i], "Hello World : from slave %d\n", i+1);
+    }
+    //fprintf(slave1, "Hello from slave 1\n");
+    //fprintf(slave2, "Hello from slave 2\n");
+    //fprintf(slave3, "Hello from slave 3\n");
 /*
  * Here is where the program really begins
  */
-    struct Queue *buf1, *buf2, *buf3;
+    /*
+    for(int i = 0; i < 3; i++)
+    {
+        printf("printf sem m = %d, sem c =%d\n", m_sems[i], c_sems[i]);
+    }
+
+    for(int i = 0; i < 3; i++)
+    {
+        printf("printf sem m = %d, sem c =%d\n", m_sems[i], c_sems[i]);
+    }
+    */
+
     mem_sem_alloc();
-
-    buf1 = map_queue(queue1);
-    init_queue(buf1, slave1, c_sem1, m_sem1);
-    buf2 = map_queue(queue2);
-    init_queue(buf2, slave2, c_sem2, m_sem2);
-    buf3 = map_queue(queue3);
-    init_queue(buf3, slave3, c_sem3, m_sem3);
-
+    queue *buf[3];
+    for(int i = 0; i < 3; i++)
+    {
+        buf[i] = map_queue(queues[i]);
+        init_queue(buf[i], slaves[i], c_sems[i], m_sems[i]);
+    }
 
     if(!fork())
     {
-        do_work(queue1, queue2, 1);
+        do_work(queues[2], queues[0], 3);
         _exit(0);
     }
 
     if(!fork())
     {
-        do_work(queue2, queue3, 2);
+        do_work(queues[1], queues[2], 2);
         _exit(0);
     }
 
     if(!fork())
     {
-        do_work(queue3, queue1, 3);
+        do_work(queues[0], queues[1], 1);
         _exit(0);
     }
+
+
+
+    if(!fork())
+    {
+        _exit(1);
+    }
+
 /*  temp fin of the program */
     printf("Press any key to exit\n");
     getc(stdin);
@@ -95,39 +122,25 @@ void sigterm_exit()
     struct shmid_ds arg;
     arg.shm_segsz = sizeof(struct Queue);
 
-    shmctl(queue1, IPC_RMID, &arg);
-    shmctl(queue2, IPC_RMID, &arg);
-    shmctl(queue3, IPC_RMID, &arg);
-
-    binary_sem_deallocate(m_sem1);
-    binary_sem_deallocate(m_sem2);
-    binary_sem_deallocate(m_sem3);
-
-    sem_deallocate(c_sem1);
-    sem_deallocate(c_sem2);
-    sem_deallocate(c_sem3);
+    for(int j = 0; j< 3; ++j)
+    {
+        shmctl(queues[j], IPC_RMID, &arg);
+        binary_sem_deallocate(m_sems[j]);
+        sem_deallocate(c_sems[j]);
+    }
 }
 
 void mem_sem_alloc()
 {
     //TODO: memory and semaphores creation
-    queue1 = alloc_sh_queue();
-    queue2 = alloc_sh_queue();
-    queue3 = alloc_sh_queue();
-
-    m_sem1 = binary_sem_allocate(QUEUE_1, IPC_CREAT | 0666);
-    m_sem2 = binary_sem_allocate(QUEUE_2, IPC_CREAT | 0666);
-    m_sem3 = binary_sem_allocate(QUEUE_3, IPC_CREAT | 0666);
-
-    binary_sem_init(m_sem1);
-    binary_sem_init(m_sem2);
-    binary_sem_init(m_sem3);
-
-    c_sem1 = sem_allocate(F_QUEUE_1, IPC_CREAT | 0666);
-    c_sem2 = sem_allocate(F_QUEUE_2, IPC_CREAT | 0666);
-    c_sem3 = sem_allocate(F_QUEUE_3, IPC_CREAT | 0666);
-
-    sem_init(c_sem1, 10);
-    sem_init(c_sem2, 10);
-    sem_init(c_sem3, 10);
+    for(int i = 0; i < 3; ++i)
+    {
+        queues[i] = alloc_sh_queue();
+    }
+    m_sems[0] = binary_sem_allocate(QUEUE_1, IPC_CREAT | 0666);
+    c_sems[0] = sem_allocate(F_QUEUE_1, IPC_CREAT | 0666);
+    m_sems[1] = binary_sem_allocate(QUEUE_2, IPC_CREAT | 0666);
+    c_sems[1] = sem_allocate(F_QUEUE_2, IPC_CREAT | 0666);
+    m_sems[2] = binary_sem_allocate(QUEUE_3, IPC_CREAT | 0666);
+    c_sems[2] = sem_allocate(F_QUEUE_3, IPC_CREAT | 0666);
 }
