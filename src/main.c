@@ -25,11 +25,18 @@ void sigterm_exit(); //TODO
 
 void mem_sem_alloc(); //TODO
 
-FILE *slave1, *slave2, *slave3;
+void restart();
+
+void kill_workers();
+
+void fork_workers();
+
 int queues[3]; //keys to queues
 int c_sems[3]; //semids to queue mutex
 int m_sems[3]; //semids to queue count semaphores
-FILE *slaves[3];
+FILE *slaves[3]; //terminal streams
+pid_t worker_PID[3]; //worker PID-s
+queue *buf[3]; //maped queues to initialize
 
 int main(void)
 {
@@ -37,18 +44,16 @@ int main(void)
     memset(&action, 0, sizeof(struct sigaction));
     action.sa_handler = sigterm_exit;
     sigaction(SIGTERM, &action, NULL);
+    mem_sem_alloc();
 
 /*
- * First we need to obtain 3 separate slave
+ * We need to obtain 3 separate slave
  * terminals to see how simulation goes on
  */
     for(int i = 0; i < 3; i++)
     {
        slaves[i] = get_ptmx_str();
     }
-    //slave1 = get_ptmx_str();
-    //slave2 = get_ptmx_str();
-    //slave3 = get_ptmx_str();
 /*
  * Each slave will introduce himself with
  */
@@ -56,55 +61,51 @@ int main(void)
     {
        fprintf(slaves[i], "Hello World : from slave %d\n", i+1);
     }
-    //fprintf(slave1, "Hello from slave 1\n");
-    //fprintf(slave2, "Hello from slave 2\n");
-    //fprintf(slave3, "Hello from slave 3\n");
 /*
- * Here is where the program really begins
+ * Here is where the program begins
+ * now we initialize queues
  */
-    /*
-    for(int i = 0; i < 3; i++)
-    {
-        printf("printf sem m = %d, sem c =%d\n", m_sems[i], c_sems[i]);
-    }
 
-    for(int i = 0; i < 3; i++)
-    {
-        printf("printf sem m = %d, sem c =%d\n", m_sems[i], c_sems[i]);
-    }
-    */
-
-    mem_sem_alloc();
-    queue *buf[3];
     for(int i = 0; i < 3; i++)
     {
         buf[i] = map_queue(queues[i]);
         init_queue(buf[i], slaves[i], c_sems[i], m_sems[i]);
     }
 
-    if(!fork())
+    int exit = 0;
+    int input;
+    char none;
+    while(!exit)
     {
-        do_work(queues[2], queues[0], 3);
-        _exit(0);
-    }
-
-    if(!fork())
-    {
-        do_work(queues[1], queues[2], 2);
-        _exit(0);
-    }
-
-    if(!fork())
-    {
-        do_work(queues[0], queues[1], 1);
-        _exit(0);
-    }
-
-
-
-    if(!fork())
-    {
-        _exit(1);
+        printf("Choose option:\n"
+               "\t1. Begin\n"
+               "\t2. Kill workers\n"
+               "\t3. Restart\n"
+               "\t4. Exit\n");
+        if(scanf("%d", &input) != 1)
+        {
+            input = 0;
+        }
+        while(getc(stdin) != '\n');
+        switch (input)
+        {
+            case 1 :
+                fork_workers();
+                break;
+            case 2 :
+                kill_workers();
+                break;
+            case 3 :
+                restart();
+                break;
+            case 4 :
+                exit = 1;
+                kill_workers();
+                break;
+            default:
+                printf("Not an option\n");
+                break;
+        }
     }
 
 /*  temp fin of the program */
@@ -118,6 +119,7 @@ int main(void)
 void sigterm_exit()
 {
     //TODO: memory and semaphores cleanup
+    kill_workers();
 
     struct shmid_ds arg;
     arg.shm_segsz = sizeof(struct Queue);
@@ -143,4 +145,42 @@ void mem_sem_alloc()
     c_sems[1] = sem_allocate(F_QUEUE_2, IPC_CREAT | 0666);
     m_sems[2] = binary_sem_allocate(QUEUE_3, IPC_CREAT | 0666);
     c_sems[2] = sem_allocate(F_QUEUE_3, IPC_CREAT | 0666);
+}
+
+void restart()
+{
+    kill_workers();
+    fork_workers();
+}
+
+void kill_workers()
+{
+    for(int i = 0; i < 3; i++)
+    {
+        if(worker_PID[i])
+        {
+            kill(worker_PID[i], SIGKILL);
+            worker_PID[i] = 0;
+        }else{
+            printf("No process to kill\n");
+            return;
+        }
+    }
+    for(int i = 0; i < 3; i++)
+    {
+        init_queue(buf[i], slaves[i], c_sems[i], m_sems[i]);
+        fprintf(slaves[i],"Cleaning queue nr %d\n", i+1);
+    }
+}
+
+void fork_workers()
+{
+    for(int i = 0; i < 3; i++)
+    {
+        if(!(worker_PID[i]=fork()))
+        {
+            do_work(queues[i], queues[(i+1)%3], i+1);
+            _exit(0);
+        }
+    }
 }
