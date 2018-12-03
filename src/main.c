@@ -21,11 +21,9 @@
 #include "../include/sh-mem.h"
 #include "../include/worker.h"
 
-void sigterm_exit(); //TODO
+void sigterm_exit();
 
-void mem_sem_alloc(); //TODO
-
-void restart();
+void mem_sem_alloc();
 
 void kill_workers();
 
@@ -64,6 +62,7 @@ int main(void)
 /*
  * Here is where the program begins
  * now we initialize queues
+ * then menu
  */
 
     for(int i = 0; i < 3; i++)
@@ -73,52 +72,66 @@ int main(void)
     }
 
     int exit = 0;
-    int input;
-    char none;
+    int input1, input2;
     while(!exit)
     {
         printf("Choose option:\n"
                "\t1. Begin\n"
-               "\t2. Kill workers\n"
-               "\t3. Restart\n"
-               "\t4. Exit\n");
-        if(scanf("%d", &input) != 1)
+               "\t2. Check queue count\n"
+               "\t3. Exit\n");
+        if(scanf("%d", &input1) != 1)
         {
-            input = 0;
+            input1 = 0;
         }
         while(getc(stdin) != '\n');
-        switch (input)
+        switch (input1)
         {
             case 1 :
                 fork_workers();
                 break;
             case 2 :
-                kill_workers();
+            {
+                printf("\tChoose Queue:\n"
+                       "\t\t1. Queue\n"
+                       "\t\t2. Queue\n"
+                       "\t\t3. Queue\n");
+                if(scanf("%d", &input2) != 1)
+                {
+                    input2 = 0;
+                }
+                while(getc(stdin) != '\n');
+                switch (input2)
+                {
+                    case 1 :
+                    case 2 :
+                    case 3 :
+                        printf("Queue %d is %d cars\n", input2, get_size(buf[input2-1]));
+                        break;
+                    default:
+                        printf("Not an option\n");
+                        break;
+                }
+            }
                 break;
             case 3 :
-                restart();
-                break;
-            case 4 :
                 exit = 1;
-                kill_workers();
                 break;
             default:
                 printf("Not an option\n");
                 break;
         }
     }
-
 /*  temp fin of the program */
-    printf("Press any key to exit\n");
-    getc(stdin);
-
+//    printf("Press any key to exit\n");
+//    getc(stdin);
     sigterm_exit();
     return 0;
 }
 
-void sigterm_exit()
+void sigterm_exit() //deallock shared memory o exit/sigterm
 {
-    //TODO: memory and semaphores cleanup
+    printf("Cleaning...\n");
+
     kill_workers();
 
     struct shmid_ds arg;
@@ -130,11 +143,12 @@ void sigterm_exit()
         binary_sem_deallocate(m_sems[j]);
         sem_deallocate(c_sems[j]);
     }
+
+    printf("Cleaned.\n");
 }
 
-void mem_sem_alloc()
+void mem_sem_alloc() //alloc shared memory
 {
-    //TODO: memory and semaphores creation
     for(int i = 0; i < 3; ++i)
     {
         queues[i] = alloc_sh_queue();
@@ -147,13 +161,7 @@ void mem_sem_alloc()
     c_sems[2] = sem_allocate(F_QUEUE_3, IPC_CREAT | 0666);
 }
 
-void restart()
-{
-    kill_workers();
-    fork_workers();
-}
-
-void kill_workers()
+void kill_workers() //send sigkill to workers as they are simplified to infinite loop
 {
     for(int i = 0; i < 3; i++)
     {
@@ -173,8 +181,13 @@ void kill_workers()
     }
 }
 
-void fork_workers()
+void fork_workers() //frok junction worker process
 {
+    if(worker_PID[0] != 0)
+    {
+        printf("Already forked workers\n");
+        return;
+    }
     for(int i = 0; i < 3; i++)
     {
         if(!(worker_PID[i]=fork()))

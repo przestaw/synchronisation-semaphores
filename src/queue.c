@@ -2,7 +2,6 @@
 // Created by przemek on 11/27/18.
 //
 
-#include <time.h>
 #include "../include/queue.h"
 #include "../include/message.h"
 #include "../include/sem.h"
@@ -24,11 +23,6 @@ void init_queue(queue * buf, FILE * stream, int count_sem, int mut_sem)
 
 int put_msg(queue * buf, mes_car car)
 {
-    if(buf->size >= BUF_SIZE)
-    {
-        printf("problem - sem = %d", sem_getVal(buf->count_semaphore));
-        return -1;
-    }
     if(car.prio == -1)
     {
         return -1;
@@ -63,7 +57,7 @@ mes_car see_msg(queue * buf)
 
 void take_car(queue * buf)
 {
-    if(buf->size != 10)
+    if(buf->size <= 10)
     {
         buf->car_buf[buf->begin] = NOT_A_CAR;
         buf->begin = (buf->begin + 1)% BUF_SIZE; //+1
@@ -74,7 +68,8 @@ void take_car(queue * buf)
     }
 }
 
-mes_car cmp_msg(queue * buf, mes_car car)
+/*
+mes_car cmp_msg(queue * buf, mes_car car) //deprecated
 {
     mes_car tmp = see_msg(buf);
     if(tmp.prio <= car.prio )
@@ -95,6 +90,7 @@ mes_car cmp_msg(queue * buf, mes_car car)
         return tmp;
     }
 }
+*/
 
 int get_size(queue * buf)
 {

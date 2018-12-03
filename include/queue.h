@@ -19,16 +19,21 @@ typedef struct Queue{
 }queue;
 
 int put_msg(queue * , mes_car );
+//put message into queue
 
-mes_car see_msg(queue *);
-void take_car(queue *);
+mes_car see_msg(queue *); //get the message from begin
+void take_car(queue *); //discard/take first message
+//together is a 'pop'
 
-mes_car cmp_msg(queue *, mes_car);
+//mes_car cmp_msg(queue *, mes_car);
 
 int get_size(queue *);
+//get the queue size from semaphore
 
 void print_queue(queue *);
+//print queue to the stream of the queue
 
 void init_queue(queue *, FILE *, int, int);
+//initialize queue struct
 
 #endif //QUEUE_PS

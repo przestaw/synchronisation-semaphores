@@ -8,5 +8,6 @@
 #include <stdio.h>
 
 FILE * get_ptmx_str();
+//obtain the slave console stream
 
 #endif //SOI_3_TERMINAL_STREAM_H

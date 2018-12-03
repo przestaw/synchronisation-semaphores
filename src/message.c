@@ -22,3 +22,21 @@ mes_car gen_car(int seed)
     }
     return new_car;
 }
+
+mes_car gen_new_car(int seed1, int seed2, int seed3)
+{
+    mes_car new_car;
+    if(seed1 % 3 == 0 || seed1 % 5 == 0)
+    {
+        new_car.prio = 0;
+        if(seed2 % 8 == 0)
+            new_car.prio = 1;
+
+        new_car.destination = (1 + (seed3 % 3));
+
+    }else{
+        new_car = NOT_A_CAR;
+    }
+    return new_car;
+
+}

@@ -13,17 +13,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-void do_sleep();
-
-void do_work_old(int input, int output, int nr)
-{
-    queue *in, *out;
-    in = map_queue(input);
-    out = map_queue(output);
-
-    sem_getVal(in->count_semaphore);
-
-}
+void do_sleep(); //sleep used only here so it's not defined in header
 
 void do_work(int input, int output, int nr)
 {
@@ -36,12 +26,13 @@ void do_work(int input, int output, int nr)
     mes_car current, car, tmp;
     current = NOT_A_CAR;
     car = NOT_A_CAR;
-    for(int i = 0; i < 10000; i++)
+    while(1)
     {
         if(car.prio == -1)
         {
             do{
-                car = gen_car(rand()); //car wanting to go on crossing
+                //car = gen_car(rand()); //car wanting to go on crossing
+                car = gen_new_car(rand(), rand(), rand());
             }while(car.destination == nr);
         }
         binary_sem_wait(in->mutex_semaphore);        //SEMAPHORE in WAIT
@@ -95,7 +86,6 @@ void do_work(int input, int output, int nr)
             fflush(in->my_stream);
             binary_sem_signal(in->mutex_semaphore);    //SEMAPHORE in SINGAL
             sem_change(in->count_semaphore, +1);//SEMAPHORE in count UP
-
         }
 
 

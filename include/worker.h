@@ -8,9 +8,6 @@
 #include "../include/queue.h"
 
 void do_work(int input, int output, int nr);
-
-void do_work_old(int input, int output, int nr);
-
-void * map_queue(int);
+//logic of infinite loop for junction
 
 #endif //WORKER_PS

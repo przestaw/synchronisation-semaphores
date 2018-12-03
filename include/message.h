@@ -14,5 +14,9 @@ typedef struct Mes_Car{
 }mes_car;
 
 mes_car gen_car(int);
+//gen car from one seed
+
+mes_car gen_new_car(int, int, int);
+//gen car from 3 seeds
 
 #endif //MESSAGE_PS
