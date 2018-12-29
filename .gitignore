@@ -1,0 +1,29 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+#IDE files
+.idea/
+*.tcl
+
+#CMake files
+CMakeFiles/
+cmake*
+*.cmake
+CMakeCache.txt
+[Mm]akefile
+
+#temp files
+Testing
+*XD*
+
+#binaries
+Cocurrent
